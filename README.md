@@ -38,6 +38,8 @@ Flow Driver works by treating a cloud storage folder as a data queue:
 ### 1. Obtain Credentials / دریافت فایل اعتبارنامه
 To get your `credentials.json`, follow the instructions on the [Google Drive API Go Quickstart](https://developers.google.com/workspace/drive/api/quickstart/go) or follow these steps:
 
+برای دریافت فایل `credentials.json` می‌توانید طبق دستورالعمل‌های موجود در [شروع سریع Google Drive API برای Go](https://developers.google.com/workspace/drive/api/quickstart/go) عمل کنید یا مراحل زیر را انجام دهید:
+
 **English:**
 1.  **Enable the API**: Go to the [Google Cloud Console](https://console.cloud.google.com/), create a project, and enable the **Google Drive API**.
 2.  **Configure Consent Screen**: Go to "APIs & Services" > "OAuth consent screen." Fill in the app name and user support email (Branding).
