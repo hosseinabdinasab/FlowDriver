@@ -45,25 +45,49 @@ func NewSession(id string) *Session {
 	return s
 }
 
-func (s *Session) EnqueueTx(data []byte) {
+const DefaultMaxTxBuffer = 2 * 1024 * 1024
+
+func (s *Session) SnapshotTx(maxBytes int) ([]byte, uint64, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// BACKPRESSURE: Block if txBuf is larger than 2MB
-	// This prevents memory explosion when uploading through the proxy
-	for len(s.txBuf) > 2*1024*1024 && !s.closed {
-		s.txCond.Wait()
+	if s.closed {
+		return nil, s.txSeq, true
 	}
 
-	s.txBuf = append(s.txBuf, data...)
-	s.lastActivity = time.Now()
+	if len(s.txBuf) == 0 {
+		return nil, s.txSeq, false
+	}
+
+	n := len(s.txBuf)
+	if maxBytes > 0 && n > maxBytes {
+		n = maxBytes
+	}
+
+	payload := make([]byte, n)
+	copy(payload, s.txBuf[:n])
+
+	return payload, s.txSeq, false
 }
 
-func (s *Session) ClearTx() {
+func (s *Session) CommitTx(seq uint64, sentLen int) bool {
 	s.mu.Lock()
-	s.txBuf = nil
-	s.txCond.Broadcast() // Wake up any writers blocked on backpressure
-	s.mu.Unlock()
+	defer s.mu.Unlock()
+
+	if seq != s.txSeq {
+		return false
+	}
+
+	if sentLen > len(s.txBuf) {
+		sentLen = len(s.txBuf)
+	}
+
+	copy(s.txBuf, s.txBuf[sentLen:])
+	s.txBuf = s.txBuf[:len(s.txBuf)-sentLen]
+	s.txSeq++
+	s.txCond.Broadcast()
+
+	return true
 }
 
 func (s *Session) ProcessRx(env *Envelope) {
